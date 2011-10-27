@@ -3,11 +3,9 @@
 $dailydirpath = "/mnt/wd2tb/Daily";
 $filecount = 0;
 $dir = "/mnt/drobo/Movies";
-#$dir = "/mnt/2TB/TV";
-#$dir = "/mnt/2TB/Pictures";
 
 $dirlist = array(
-	"/mnt/drobo/Movies",
+#	"/mnt/drobo/Movies",
 	"/mnt/drobo/Television",
 #	"/mnt/drobo/Emulation",
 	"/mnt/drobo/Cartoons"
@@ -59,6 +57,7 @@ $maxtime = 10; //thisis a precentage 10% of the total time can be one video
 $mintime = 1;
 $totaltime = 0;
 $fempegvar = "";
+$count = 1;
 
 //1800 is 30min... or should be
 while ($totaltime < $timeline){
@@ -95,13 +94,21 @@ if ($tvidtime < $vidpart) {
 	$se = $ss + $vidpart;
 }
 
-print "Start: $ss End: $se Total Duration: $vidpart\n";
+#print "Start: $ss End: $se Total Duration: $vidpart\n";
 print "Using part of: $vidfile\n";
-print "Hours: $vidtime[0] Min: $vidtime[1] Seconds: $vidtime[2] or Total Seconds: $tvidtime\n";
+print "$vidtime[0] Hours | $vidtime[1] Min | $vidtime[2] Sec | Total Seconds: $tvidtime\n";
+print "Start: $ss End: $se Total Duration: $vidpart\n";
 
+
+//files are fun!  here we um do that thing... escape character bad things
 $vidfile2 = str_replace(" ","\ ",$vidfile);
+$vidfile = str_replace("(","\(",$vidfile2);
+$vidfile2 = str_replace(")","\)",$vidfile);
+$vidfile = str_replace("'","\'",$vidfile2);
+$vidfile2 = str_replace("!","\!",$vidfile);
 
-$fempegvar = "$fempegvar -ss $ss -t $se -i $vidfile2";
+//well looks like I can't do what I want, so export each then combine
+echo exec("ffmpeg -ss $ss -t $se -i $vidfile2 -ab 56 -ar 22050 -b 500 -s 320x240 ./temp/$count.mpg");
 
 #$temp = $vidtime[1];
 #$temp = $temp + 90;
@@ -109,11 +116,21 @@ $fempegvar = "$fempegvar -ss $ss -t $se -i $vidfile2";
 #echo intval($matches[1]);
 #print "Show me the MIN! $temp\n"; 
 
+$count = $count + 1;
 $totaltime = $totaltime + $vidpart;
 }
 
-#print "$fempegvar\n";
-echo exec("ffmpeg -vcodec copy $fempegvar -vcodec mpeg4 -b 800 test.mp4");
+//Now to add the files together...mencoder!
+//read in the dir... wait no I don't aka $count having it!  glory!
+$robin = "";
+$counta = 1;
+while ($counta < $count) {
+		$robin = "$robin ./temp/$counta.mpg";
+		$counta = $counta + 1;
+	}
+
+print "$robin\n";
+echo exec("mencoder -forceidx -oac copy -ovc mpg $robin -o end.mpg");
 
 // and by magic its a new date!
 $today = date("Y-m-d");
