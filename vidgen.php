@@ -1,17 +1,27 @@
 <?php
 
-$dailydirpath = "/mnt/wd2tb/Daily";
+$dailydirpath = "/mnt/wd2tb/Daily"; //where we dump the final files
 $filecount = 0;
+$tempdir = "/home/roger/vidgen/temp/";
 $dir = "/mnt/drobo/Movies";
+$vidsize = "1280x720"; //1280x720 720HD
+#$ffmpegextra = "-loglevel quiet"; //Change as needed
+$timeline = 1800; //this measure will be minutes... actuall nm, seconds... cause we can!  (will work with some other project)
+$maxtime = 5; //thisis a precentage 10% of the total time can be one video
+$mintime = 1; //this is the min percent a file can be added
 
 $dirlist = array(
-#	"/mnt/drobo/Movies",
-	"/mnt/drobo/Television",
+	"/mnt/drobo/Movies",
+#	"/mnt/drobo/Television",
 #	"/mnt/drobo/Emulation",
 	"/mnt/drobo/Cartoons"
 	);
 
 $path = '';
+foreach(glob($tempdir.'*.*') as $tempfile){
+	print "Removing Temp File: $tempfile\n";
+	unlink($tempfile);
+}
 
 foreach($dirlist as $dir) {
 #   $path = '';
@@ -52,9 +62,6 @@ print "\nTotal Media: $filecount\n";
 
 //Ok, now for pain!
 //so the idea here will be to do a while loop until we create a movie of this length
-$timeline = 1800; //this measure will be minutes... actuall nm, seconds... cause we can!  (will work with some other project)
-$maxtime = 10; //thisis a precentage 10% of the total time can be one video
-$mintime = 1;
 $totaltime = 0;
 $fempegvar = "";
 $count = 1;
@@ -97,7 +104,7 @@ if ($tvidtime < $vidpart) {
 #print "Start: $ss End: $se Total Duration: $vidpart\n";
 print "Using part of: $vidfile\n";
 print "$vidtime[0] Hours | $vidtime[1] Min | $vidtime[2] Sec | Total Seconds: $tvidtime\n";
-print "Start: $ss End: $se Total Duration: $vidpart\n";
+print "Start: $ss End: $se Total Duration Used: $vidpart\n";
 
 
 //files are fun!  here we um do that thing... escape character bad things
@@ -108,13 +115,7 @@ $vidfile = str_replace("'","\'",$vidfile2);
 $vidfile2 = str_replace("!","\!",$vidfile);
 
 //well looks like I can't do what I want, so export each then combine
-echo exec("ffmpeg -ss $ss -t $se -i $vidfile2 -ab 56 -ar 22050 -b 500 -s 320x240 ./temp/$count.mpg");
-
-#$temp = $vidtime[1];
-#$temp = $temp + 90;
-#$temp = intval(strval($matches[1])); 
-#echo intval($matches[1]);
-#print "Show me the MIN! $temp\n"; 
+echo exec("ffmpeg -ss $ss -t $se -i $vidfile2 -ab 56 -ar 22050 -b 500 -s $vidsize $tempdir$count.mpg $ffmpegextra");
 
 $count = $count + 1;
 $totaltime = $totaltime + $vidpart;
@@ -129,23 +130,33 @@ while ($counta < $count) {
 		$counta = $counta + 1;
 	}
 
-print "$robin\n";
-echo exec("mencoder -forceidx -oac copy -ovc mpg $robin -o end.mpg");
-
 // and by magic its a new date!
 $today = date("Y-m-d");
 
 //SET THE NAME OF THE LINK
-$link = "$today.mp4";
+$link = "$today.mpg";
+
+//Create the new file
+echo exec("cat $robin > $dailydirpath/$link");
+#echo exec("cat $robin > test.mpg");
 
 //REMOVE THE SYMBOLIC LINK WE CREATED BEFORE
-unlink("$dailydirpath/{$link}");
+#unlink("$dailydirpath/{$link}");
 
 //CREATE A SYMBOLIC LINK USING PHP
-symlink("$path[$random]","$dailydirpath/{$link}");
+#symlink("$path[$random]","$dailydirpath/{$link}");
 
 //REMOVE THE SYMBOLIC LINK WE CREATED BEFORE
 unlink("/mnt/wd2tb/Movies/Personal/Today.mp4");
+
+//Remove the partial files
+$counta = 1;
+while ($counta < $count) {
+	unlink("$tempdir$counta.mpg");
+#	$robin = "$robin ./temp/$counta.mpg";
+        $counta = $counta + 1;
+}
+#unlink("$tempdir/*.mpg");
 
 //CREATE A SYMBOLIC LINK USING PHP
 symlink("$dailydirpath/{$link}","/mnt/wd2tb/Movies/Personal/Today.mp4");
